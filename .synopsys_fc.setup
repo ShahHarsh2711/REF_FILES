@@ -1,0 +1,32 @@
+echo "Reading settings from .synopsys_fc.setup"
+
+#####
+# Enable logging of commands and everything by date/shell
+set timestamp [pid].[clock format [clock scan now] -format "%Y-%m-%d_%H-%M"]
+set sh_output_log_file "${synopsys_program_name}.log.$timestamp"
+set sh_command_log_file "${synopsys_program_name}.cmd.$timestamp"
+
+#####
+# Automatically determine number of threads available on this machine and use them all, but don't exceed 8:
+set np [exec grep processor /proc/cpuinfo | wc -l]
+if {$np > 8} { set np 8 }
+set_host_options -max_cores $np
+
+#####
+source ../ref/tools/procs.tcl
+
+suppress_message LGL-089
+suppress_message FLW-2000
+suppress_message FLW-2001
+set_message_info -limit 5 -id ATTR-11
+set_message_info -limit 5 -id ATTR-12
+
+proc hl_icgs {} {
+  gui_change_highlight -remove -all_colors
+  gui_change_highlight -add -color light_orange -collection [get_clock_gates]  
+  # highlight intermediate buffers as well
+  set buffers [remove_from_collection [all_fanout -only_cells -from [get_clock_gate_pins -type gated_clock]] [all_registers]]
+  gui_change_highlight -add -color yellow -collection $buffers
+  gui_change_highlight -add -color blue -collection [get_nets -of [all_fanout -from [get_clock_gate_pins -type gated_clock]]]
+}
+
